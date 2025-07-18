@@ -25,7 +25,8 @@ class ChatRequest(BaseModel):
     top_k: int | None = 5
 
 class ChatResponse(BaseModel):
-    answer: str
+    original_answer: str
+    final_answer: str
     similar: list[str]
 
 # -------- Helpers --------------
@@ -59,10 +60,17 @@ async def chat(req: ChatRequest):
         "You are an AI assistant.\n"
         "Here are some previous high‑similarity prompts (treated as additional context, not answers):\n"
         + "\n---\n".join(similar) +
-        "\n---\nNow answer the USER question as accurately as possible:\nUSER: " + req.prompt
+        "\n---\nNow answer the USER question as accurately as possible:\nUSER: "
+        + req.prompt
     )
-    answer = await asyncio.to_thread(call_ollama, merged_prompt)
-    return ChatResponse(answer=answer, similar=similar)
+    # call model on original and merged prompt
+    original_answer = await asyncio.to_thread(call_ollama, req.prompt)
+    final_answer = await asyncio.to_thread(call_ollama, merged_prompt)
+    return ChatResponse(
+        original_answer=original_answer,
+        final_answer=final_answer,
+        similar=similar,
+    )
 
 @app.get("/health")
 def health(): return {"status": "ok"}
