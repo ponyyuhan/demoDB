@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      QDRANT_HOST: qdrant
+      OLLAMA_URL: "http://ollama:11434"
+    depends_on:
+      - qdrant
+      - ollama
+    ports:
+      - "8000:8000"
+
+volumes:
+  qdrant_data:
+  ollama_data:
