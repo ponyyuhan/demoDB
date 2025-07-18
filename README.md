@@ -26,7 +26,10 @@ the effect of the augmentation.
 docker compose up
 ```
 
-The first start downloads the model and ingests the ShareGPT dataset into Qdrant (about 20k prompts for a fast demo).
+The first start downloads the model and tries to ingest the ShareGPT dataset into
+Qdrant (about 20k prompts for a fast demo). If the dataset cannot be downloaded
+because of network restrictions, the backend falls back to a small set of sample
+prompts stored locally so the demo still works offline.
 
 3. In another terminal, send a query:
 
@@ -43,4 +46,5 @@ the merged prompt).
 - `backend/` – FastAPI app and ingestion script.
 - `client/` – simple CLI client.
 - `docker-compose.yml` – launches Qdrant, Ollama and the backend service.
+
 

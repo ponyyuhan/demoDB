@@ -1,9 +1,12 @@
-import os,sys; sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import pytest
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi.testclient import TestClient
+import pytest
 import backend.main as main
 
-# Create a TestClient for the FastAPI app
 client = TestClient(main.app)
 
 
@@ -28,6 +31,7 @@ def test_chat_endpoint(monkeypatch):
 
     monkeypatch.setattr(main, 'retrieve_similar', fake_retrieve)
     monkeypatch.setattr(main, 'call_ollama', fake_call)
+    monkeypatch.setattr(main.client, 'collection_exists', lambda *_: True)
 
     payload = {'prompt': 'How do I bake bread?', 'top_k': 5}
     resp = client.post('/chat', json=payload)

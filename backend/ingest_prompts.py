@@ -3,9 +3,15 @@
 1. 下载 RyokoAI/ShareGPT52K
 2. 抽取所有 user prompts
 3. 生成嵌入，批量写入 Qdrant
-总计约 90k 条，
+总计约 90k 条，可在演示时通过 `limit` 参数缩减到 2 万左右
 """
-import os, itertools, uuid, tqdm
+import os
+import itertools
+import json
+import uuid
+from pathlib import Path
+
+import tqdm
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from datasets import load_dataset
@@ -26,18 +32,25 @@ def main(limit=None):
     )
 
     # 2. 加载数据
-    ds = load_dataset("RyokoAI/ShareGPT52K", split="train")
+    points = []
+    try:
+        ds = load_dataset("RyokoAI/ShareGPT52K", split="train")
+        for i, record in tqdm.tqdm(enumerate(ds), total=(len(ds) if limit is None else limit)):
+            if limit and i >= limit:
+                break
+            for turn in record["conversations"]:
+                if turn["from"] == "human":
+                    points.append(turn["value"].strip())
+        print(f"Collected {len(points)} user prompts from dataset")
+    except Exception as e:
+        # 网络无法访问数据集时回退到本地样本
+        print(f"Failed to download dataset, using local sample: {e}")
+        sample_file = Path(__file__).with_name("sample_prompts.json")
+        with open(sample_file, "r", encoding="utf-8") as f:
+            points = json.load(f)
+
     model = SentenceTransformer("all-MiniLM-L6-v2")
     batch_size = 512
-    points = []
-
-    for i, record in tqdm.tqdm(enumerate(ds), total=(len(ds) if limit is None else limit)):
-        if limit and i >= limit: break
-        for turn in record["conversations"]:
-            if turn["from"] == "human":
-                prompt = turn["value"].strip()
-                points.append(prompt)
-    print(f"Collected {len(points)} user prompts")
 
     # 3. 批量写入
     for batch_idx in range(0, len(points), batch_size):
