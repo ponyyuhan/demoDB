@@ -15,6 +15,7 @@ services:
     environment:
       QDRANT_HOST: qdrant
       OLLAMA_URL: http://ollama:11434
+      USE_MOCK_RESPONSE: "true"
     depends_on:
       - qdrant
       - ollama
