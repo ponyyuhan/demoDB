@@ -12,7 +12,7 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 
 app = FastAPI(title="Prompt‑Augmented LLM Demo")
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
-# client = QdrantClient(QDRANT_HOST, port=6333)  # Disabled for demo
+client = QdrantClient(QDRANT_HOST, port=6333)
 
 
 # --- Cold‑start ingestion (disabled for demo) ----
@@ -55,19 +55,36 @@ class ChatResponse(BaseModel):
 
 
 # -------- Helpers --------------
-def retrieve_similar(text: str, k: int):
-    # For demo purposes, always use sample data to avoid Qdrant API issues
-    print("Using sample data for demo")
+def retrieve_similar(text: str, k: int = 5) -> list[str]:
     try:
-        import json
-        from pathlib import Path
-        sample_file = Path(__file__).with_name("sample_prompts.json")
-        with open(sample_file, "r", encoding="utf-8") as f:
-            sample_prompts = json.load(f)
-        return sample_prompts[:k]  # Return first k samples
+        # 1) Encode prompt
+        embedding = embedder.encode([text], normalize_embeddings=True)
+        vector = embedding[0].tolist()
+
+        # 2) Proper Qdrant search - using correct API for qdrant-client 1.4.0
+        hits = client.search(
+            collection_name=COLLECTION,
+            query_vector=vector,
+            limit=k,
+            with_payload=True
+        )
+
+        # 3) Extract prompt strings
+        return [hit.payload.get("text", "") for hit in hits]
+    
     except Exception as e:
-        print(f"Error loading sample data: {e}")
-        return []  # Return empty list if everything fails
+        print(f"Qdrant search failed: {e}, falling back to sample data")
+        # Fallback to sample data
+        try:
+            import json
+            from pathlib import Path
+            sample_file = Path(__file__).with_name("sample_prompts.json")
+            with open(sample_file, "r", encoding="utf-8") as f:
+                sample_prompts = json.load(f)
+            return sample_prompts[:k]  # Return first k samples
+        except Exception as fallback_e:
+            print(f"Error loading sample data: {fallback_e}")
+            return []  # Return empty list if everything fails
 
 
 def call_ollama(prompt: str) -> str:
