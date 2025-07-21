@@ -21,6 +21,9 @@ if __name__ == "__main__":
             print("Backend returned invalid JSON")
             sys.exit(1)
 
+        # Smoke test assertion
+        assert data["similar"], "Top‑5 similar list is empty – ingestion or search failed."
+        
         print("\n💡 Top‑5 retrieved prompts:")
         for i, t in enumerate(data.get("similar", []), 1):
             print(f"{i}. {t[:120]}…")

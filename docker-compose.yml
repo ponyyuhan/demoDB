@@ -15,7 +15,12 @@ services:
     environment:
       QDRANT_HOST: qdrant
       OLLAMA_URL: http://ollama:11434
-      USE_MOCK_RESPONSE: "true"
+      OLLAMA_MODEL: tinyllama:1.1b
+      PROMPT_LIMIT: "20000"
+      OLLAMA_TIMEOUT: "300"
+      EMB_MODEL: "BAAI/bge-base-en-v1.5"
+      SCORE_THRESHOLD: "0.35"
+      FORCE_RECREATE: "false"            # no longer recreate every boot
     depends_on:
       - qdrant
       - ollama
