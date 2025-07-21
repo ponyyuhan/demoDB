@@ -23,7 +23,7 @@ the effect of the augmentation.
 2. Start all services:
 
 ```bash
-docker compose up
+docker compose up --build
 ```
 
 The first start downloads the model and tries to ingest the ShareGPT dataset into
@@ -37,9 +37,66 @@ prompts stored locally so the demo still works offline.
 python client/client.py "How do I bake bread?"
 ```
 
+Or test the API directly:
+
+```bash
+curl -X POST http://localhost:8000/chat \
+     -H "Content-Type: application/json" \
+     -d '{"prompt": "Hello, how are you?"}'
+```
+
 The script shows the top‑5 similar prompts found in Qdrant and prints both the
 "original" answer (using only the user prompt) and the "augmented" answer (using
 the merged prompt).
+
+## Development and Troubleshooting
+
+### Rebuilding after code changes
+
+Always rebuild the backend container after making changes to the code:
+
+```bash
+# Stop all services
+docker compose down
+
+# Rebuild backend container (forces fresh build)
+docker compose build --no-cache backend
+
+# Start services
+docker compose up -d
+```
+
+Or in one command:
+
+```bash
+docker compose up --build
+```
+
+### Testing the fix
+
+If you encounter Pydantic validation errors related to Qdrant search (like "Input should be a valid number" for limit/score_threshold), the fix involves ensuring proper parameter separation in the search call:
+
+```python
+# Correct: parameters passed as separate kwargs
+hits = client.search(
+    collection_name=COLLECTION,
+    query_vector=vector,
+    limit=k,
+    with_payload=True
+)
+
+# Incorrect: would cause parameters to be included in vector
+hits = client.search(vector, limit=k, score_threshold=None, ...)
+```
+
+### First-time data setup
+
+The demo includes an automatic ingestion process that runs on first startup. If you need to manually trigger data ingestion:
+
+```bash
+# Run ingestion script inside backend container
+docker exec demodb-backend-1 python ingest_prompts.py
+```
 
 ## Files
 
